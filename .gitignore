@@ -1,0 +1,39 @@
+# Binaries and executables
+*.exe
+*.out
+*.o
+*.so
+*.dll
+
+# Go-related files
+*.log
+*.test
+*.sum
+vendor/
+bin/
+pkg/
+
+# Build artifacts
+/build/
+/dist/
+
+# Dependency directories
+node_modules/
+target/
+.DS_Store
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Configuration and environment files
+.env
+.env.local
+.env.*.local
+config.yaml
+config.json
+
+# Git-related
+.tags
