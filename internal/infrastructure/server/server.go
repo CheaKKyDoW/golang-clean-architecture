@@ -5,6 +5,8 @@ import (
 	"golang-clean-architecture/internal/infrastructure/client"
 	"golang-clean-architecture/internal/infrastructure/database"
 	"golang-clean-architecture/internal/infrastructure/validate"
+	"golang-clean-architecture/internal/infrastructure/websocket"
+
 	"golang-clean-architecture/pkg/config"
 	pkg_model "golang-clean-architecture/pkg/model"
 	"log"
@@ -27,6 +29,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
+
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	// swagger
@@ -40,6 +43,7 @@ type Resource struct {
 	App         *fiber.App
 	HTTPClient  *client.HTTPClient
 	Validator   *validate.Validator
+	WSManager   *websocket.WebSocketManager
 }
 
 func NewServer(cfg *config.Cfg) (resource *Resource, err error) {
@@ -119,6 +123,7 @@ func (r *Resource) Run() (err error) {
 		},
 	},
 	))
+	// ✅ Global WebSocket Upgrade Check
 
 	r.App.Get("/swagger/*", swagger.HandlerDefault)
 
