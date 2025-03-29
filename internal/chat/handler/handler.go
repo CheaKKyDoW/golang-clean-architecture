@@ -2,9 +2,11 @@ package chat
 
 import (
 	usecase "golang-clean-architecture/internal/chat/usecase"
+	"golang-clean-architecture/internal/infrastructure/websocket"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,52 +16,50 @@ type ChatHandler interface {
 
 type chatHandler struct {
 	chatUsecase usecase.ChatUsecase
+	wsManager   *websocket.WebSocketManager
 }
 
-func NewChatHandler(usecase usecase.ChatUsecase) ChatHandler {
-	return &chatHandler{}
+func NewChatHandler(usecase usecase.ChatUsecase, wsManager *websocket.WebSocketManager) ChatHandler {
+	return &chatHandler{
+		chatUsecase: usecase,
+		wsManager:   wsManager,
+	}
 }
 
 func (h *chatHandler) RegisterRoutes(r fiber.Router) {
 
 	r.Get("/chat", h.HandleChat)
 
-	r.Use("/ws", func(c *fiber.Ctx) error {
-		// IsWebSocketUpgrade returns true if the client
-		// requested upgrade to the WebSocket protocol.
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
+	r.Use("/ws", h.wsConn)
 
-	r.Get("/ws/:id", websocket.New(func(c *websocket.Conn) {
-		// c.Locals is added to the *websocket.Conn
-		log.Println(c.Locals("allowed"))  // true
-		log.Println(c.Params("id"))       // 123
-		log.Println(c.Query("v"))         // 1.0
-		log.Println(c.Cookies("session")) // ""
+	r.Get("/ws/:id", websocket.New(h.handleWebSocket))
 
-		// websocket.Conn bindings https://pkg.go.dev/github.com/fasthttp/websocket?tab=doc#pkg-index
-		var (
-			mt  int
-			msg []byte
-			err error
-		)
-		for {
-			if mt, msg, err = c.ReadMessage(); err != nil {
-				log.Println("read:", err)
-				break
-			}
-			log.Printf("recv: %s", msg)
+}
 
-			if err = c.WriteMessage(mt, msg); err != nil {
-				log.Println("write:", err)
-				break
-			}
+func (h *chatHandler) wsConn(c *fiber.Ctx) error {
+	if websocket.IsWebSocketUpgrade(c) {
+		c.Locals("allowed", true)
+		return c.Next()
+	}
+	return fiber.ErrUpgradeRequired
+}
+func (h *chatHandler) handleWebSocket(c *websocket.Conn) {
+	defer c.Close()
+
+	h.wsManager.AddClient(c)
+	log.Println("New WebSocket connection:", c.Params("id"))
+
+	for {
+		messageType, msg, err := c.ReadMessage()
+		if err != nil {
+			log.Println("WebSocket read error:", err)
+			break
 		}
 
-	}))
+		log.Printf("Received message: %s", msg)
 
+		h.wsManager.Broadcast(messageType, msg)
+	}
+
+	h.wsManager.RemoveClient(c)
 }

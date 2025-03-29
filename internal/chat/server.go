@@ -21,7 +21,7 @@ func InitModule(cfg *config.Cfg, router fiber.Router, httpClient *client.HTTPCli
 	usecase := usecase.NewChatUsecase(repository)
 
 	// init handler
-	handler := handler.NewChatHandler(usecase)
+	handler := handler.NewChatHandler(usecase, wsManager)
 
 	handler.RegisterRoutes(router.Group("/api/v1/chat"))
 
